@@ -1,0 +1,438 @@
+---
+title: "Data_Science_Assignment"
+output: word_document
+Author: Harshika_Pareek
+Date: 04-12-2019
+---
+###Introduction: The Given dataset contains the 793 customer credit record with different variables. where variables are the attributes on which kate has to decide the future potential customers to whom she can provide the loan.Again, the Credit Standing is the Response variable and others are the predictors.
+```{r,echo=FALSE}
+#Reading the given file
+#install.packages("readxl")
+#install.packages("tidyverse")
+#install.packages("ggplot2")
+#install.packages("Amelia")
+#install.packages("GGally")
+#install.packages("DataExplorer")
+library(readxl)
+library(DataExplorer)
+library(GGally)
+library(Amelia)
+library(ggplot2)
+library(tidyverse)
+```
+
+```{r,echo=TRUE}
+#Import the data
+file1 = read_excel("Credit_Risk6_final.xlsx",sheet = "Scoring_Data")
+file2 = read_excel("Credit_Risk6_final.xlsx",sheet = "Training_Data")
+str(file2)
+```
+
+Perform EDA
+WHY EDA: EDA is an appraoch to analyze data to summarize its charcterstics using the visual methods.
+Before getting inside the dataset lets first get few insights of the data of file2, since the goal here to read and analye the file2 data using the traning
+test method and feed it into file 1 which is scoring_data
+--By looking at the structure of the dataset we can see credit standing which is resposne varible is chr, which should be Factor, since factor variables in useful in different types of graphics as well.we use factor function to convert it into factor variable.
+ 
+```{r, echo=TRUE}
+#Check for the Null values
+library(Amelia)
+missmap(file2)
+```
+missmap(file2)
+observation : As per the graph, we have missing values in column Employment,Personal status and Housing.
+Method2 : To find the missing values seperately in the seperate column
+## R Markdown
+```{r,echo=TRUE}
+summary(file2)
+sapply(file2,function(x) sum(is.na(x)))
+new_df <- file2
+sapply(new_df,function(x) sum(is.na(x)))
+summary(file2)
+sapply(file2,function(x) sum(is.na(x)))
+```
+According to the statistics Employment has 33 missing values, Personal status has 6 and Housing has 5 missing values.Handling the Missing values...In order to handle the missing values we will  copy our file2 into another dataframe which will contain no missing valuesMoreover I wll replace my missing values with MOde.
+```{r,echo=TRUE}
+val <- unique(new_df$Employment[!is.na(new_df$Employment)])
+mode <- val[which.max(tabulate(match(new_df$Employment,val)))]
+new_df$Employment[is.na(new_df$Employment)]<-mode
+colSums(is.na(new_df))
+sapply(new_df,function(x) sum(is.na(x)))
+```
+In the similar way, we will replace the missing values from Personal status and Housing as well.
+```{r,echo=TRUE}
+psych::describe(new_df)
+plot_str(new_df)
+plot_correlation(new_df, type = 'continuous')
+
+```
+Observation: As per the Plot, Continous varaibles are not related. To obtain the relation between the other variables will plot the graph between saving account and  credit history.
+```{r,echo=TRUE}
+tbl_cnt <- table(new_df$`Credit History`,new_df$`Savings Acct`)
+tbl_cnt
+ggplot(new_df,aes(x=new_df$`Credit History`, fill = new_df$`Savings Acct`))+geom_bar(position = "fill")+ylab("proportion")
+prop.table(tbl_cnt)
+```
+Observation: The given ggplot implies that the person who has the saving Account Status as "High" they are having
+Credit History as "All Paid". On the Contrary, Customer having the Low savings account has the poor credit history or marked as  a "Critical" credit history record.
+
+Reason for Loan?
+```{r,echo=TRUE}
+unique(new_df$`Loan Reason`)
+table(new_df$`Loan Reason`)
+```
+Observation: Customers have taken loans most frequent for buying New Car (186 times) followed by Small appliances.
+ However sometimes it is difficult to work witn the Raw Frequencies/counts if the sample size varies for that reason it is suggested to Convert the Raw data/count into Proportions. To do this, we have to divide the each count by the total count across categories. After, Converting the counts into proportions we observe that the 96% Of customers have taken loan in order to purchase new car.
+ 
+NOw I want to find relationship between the Loan reason and checking account using Correlation for that reason, 
+contigency table can be best represenation of the data.
+
+# Bivariate Analysis
+```{r,echo=FALSE}
+ggplot(new_df, aes(x = new_df$`Checking Acct`))  +
+  geom_histogram(alpha = 0.8, binwidth = 5,stat = "count") + 
+  xlab("account balance") +
+  facet_wrap(~ new_df$`Loan Reason`, ncol = 4)
+``` 
+Observation: When the Current account balance was zero(0), Customers have taken the loan for purchasing  a new car followed by Furniture and small applience. IN the Next Step, I will plot the Trivariate analysis to plot checking account vs savings account (color represent loan reason)
+```{r,echo=FALSE}
+library(ggplot2)
+ggplot(new_df,aes(x=new_df$`Job Type`,y=new_df$Employment,color=new_df$Housing))+geom_point(alpha = .6, size = 3)+
+  geom_smooth(se=FALSE,
+              method = "lm",
+              size = 1.5)
+```
+Observation: As per the plot, Customers who own their own House having Management job with Long and Medium 
+Employment Type.
+##Trivariate Analysis
+```{r,echo=FALSE}
+ggplot(new_df,aes(x=new_df$`Credit History`,y=new_df$Age))+geom_boxplot(aes(fill=new_df$`Credit Standing`))
+ggplot(new_df,aes(x=new_df$`Savings Acct`,y=new_df$`Months since Checking Acct opened`))+geom_boxplot(aes(fill=new_df$`Credit Standing`))
+ggplot(new_df,aes(x=new_df$`Credit History`,y=new_df$`Months since Checking Acct opened`))+geom_boxplot(aes(fill=new_df$`Credit Standing`))
+```
+#Explanation: 
+By looking at the plot we can say that, Customers who arw having Critical Credit history they all lies only in "BAD"credit standing zone.
+ 2.Secondly, Current and bank paid areas are having the outliers. Next,Customers who lies in "Delay" zone have the Credit stading ratio as "BAD" Higher than "Good".
+#2nd Trivariate Analysis
+#Explanation:
+1) Saving account with Low and Medium Low have the Outliers.
+2)Surprisingly, Customers who have the High Saving Account Balance have the Bad Credit standing Record.
+3)IN Contrast, Customers having the saving account balance as Medium low have the Good Credit Staning Record.
+#3 Trivariate analysis
+1)By looking at the plot, I can say that the customers having the Credit History as Current and opened the account early 
+Have the outliers Credit stading record lesser than the Good. 
+2)Bank paid Customers with Good Credit Standing Record.
+3) Delay Equals the Credit standing record at the same rate.
+
+##Multivariate Analysis
+```{r,echo=FALSE}
+ggplot(new_df,aes(x=new_df$`Loan Reason`,y=new_df$`Savings Acct`,color=new_df$`Checking Acct`,size=new_df$`Credit History`))+geom_point(alpha =.6)
+```
+Explanation
+My Graph Looks So Messy.....Apologies 
+1) Customers with the saving account balance have the Credit history Delay with Low Checking account balance taken the loan
+for the Business Reasons.
+2)Going Further, who have the saving account as medhigh and checing account as Zero, credit history shown the bank paid have
+Taken the loan for buying new car.
+
+
+-------QUES_2-------------
+
+##B. Decision Tree
+Step1: First, The ID column from the dataset must be removed. Since as per the EDA we have seen so far ID variable 
+is not making sense to keeping it. IN order to measure the accuracy I wiill make a use of rpart R Library.
+```{r,echo=FALSE}
+#install.packages("rpart")
+#install.packages("rpart.plot")
+library(rpart.plot)
+library(rpart)
+library(tree)
+require(tree)
+set.seed(183)
+tree <- rpart(new_df$`Credit Standing`~. ,data = new_df, method = 'class')
+tree
+rpart.plot(tree, box.palette="RdBu", shadow.col="gray", nn=TRUE,cex = 0.5)
+partition_train_test <- function(newdf,size=0.8,train=TRUE){
+  count_row = nrow(new_df)
+  total_row = size*count_row
+  train_sample <- 1:total_row
+  if(train == TRUE){
+    return(new_df[train_sample,])
+  }else{
+    return(new_df[-train_sample,])
+  }
+}
+partition_train_test(new_df, size = 0.8, train = TRUE)
+train_data <- partition_train_test(new_df,0.8,train = TRUE)
+test_data1 <- partition_train_test(new_df,0.8,train = FALSE)
+prop.table(table(train_data$`Credit Standing`))
+prop.table(table(test_data1$`Credit Standing`))
+```
+
+In the above process, I plotted decision tree using rpart where credit history is my First node. As per the plot,there are 12% of customers who had the bad credit standing having the Critical credit history, and there are 
+88% of customers who had the good credit standing had the credit history as current and delay.
+
+Explanation of the above Process:
+Step1: In the initial lines of code, I am using set.seed(183) in order to generate a sequence of number which will produce similar output pattern whenever I execute my code.
+Step2:cex I used to zoom out the text inside the decision tree
+output : 1) At the top, the root node is Credit History (Critical) which shows overall 59% customers were having crtical Credit history.
+2) if the Credit history is critical then the 12% of customers have Bad credit standing.(Leaf Node)
+3)if the credit history = critical is No, it mean 88% customers have the Credit history which is Current and delay with a 67% credit standing rate.(Decision Node)
+
+---------------QUES3---------------
+
+In order to predict our model we will split our data into train and test. We train the model on traning data and test the prediction on test(unseen) data.
+We will create a new data frame as we do not want to make any changes in the original datatset.First lets create the train dataset.
+In order to split our data we will Install Catools library which helps to split our dataset into test and traning set.
+```{r,echo=FALSE}
+partition_train_test(new_df, size = 0.8, train = TRUE)
+partition_train_test <- function(newdf,size=0.8,train=TRUE){
+  count_row = nrow(new_df)
+  total_row = size*count_row
+  train_sample <- 1:total_row
+  if(train == TRUE){
+    return(new_df[train_sample,])
+  }else{
+    return(new_df[-train_sample,])
+  }
+}
+#In the next step after partitioning the dataset will take the first row of the nth rows, if train== true will return training dataset else return false
+train_data <- partition_train_test(new_df,0.8,train = TRUE)
+test_data1 <- partition_train_test(new_df,0.8,train = FALSE)
+prop.table(table(train_data$`Credit Standing`))
+prop.table(table(test_data1$`Credit Standing`))
+```
+Explanation of the above Lines of code
+Create a function and add the function arguments
+First count the total rows in the data set and then multiply the total rows with the split ratio( for us it is 0.8 and total rows are 780 hence
+780*0.8=624(Train data), Remaning values now will be 780-624 = 156 == Test data)
+In the next step after partitioning the dataset will take the first row of the nth rows, if train== true will return training dataset else return false
+```{r,echo=FALSE}
+fit <- rpart(`Credit Standing`~.,data = new_df,method = 'class')
+rpart.plot(fit, box.palette="RdBu", shadow.col="darkgray", nn=TRUE,cex = 0.5)
+predict_test <- predict(fit,test_data1,type='class')
+predict_test
+check <- table(test_data1$`Credit Standing`,predict_test)
+check
+test_accuracy <- sum(diag(check))/sum(check)
+test_accuracy
+```
+Explanation of above lines of code
+As per the Confusion Matrix 
+predict_test
+Bad Good
+Bad   39   34
+Good   9   74 ( There are 74 customers predicted having the good credit history)
+Accuracy Test ( Which is the sum of the true postives and true negatives over sum of matix)
+We have got the accuracy of around 72%.
+
+In the Next step, I have to measure the accuracy on my test data
+```{r,echo=FALSE}
+score_data <- file1
+library(dplyr)
+score_data = score_data %>%
+  rename(`Residence Time (In current district)` = `Residence Time` ) 
+names(score_data)
+names(train_data)
+View(score_data)
+predict_score <- predict(fit,score_data, type='class')
+predict_score
+```
+Predict_score
+   1    2    3    4    5    6    7    8    9   10   11   12   13 
+Good Good Good Good Good Good Good  Bad Good Good  Bad  Bad  Bad
+
+Process Explanation to Kate of How Decision Tree works?
+1.Decision tree is a graphical representation of data where it starts with single variable and going further it classified data into differenet nodes. where these nodes are called branches these braches hold the predictors(on the basis of which we have to predict the output) and the terminal node holds the label such as NO and YES.The last node of the tree called as a leaf node.
+
+How Decision Tree works:
+1.Below are the steps involved in making decision tree:
+  1) Select best attributes/feature (x)that split your data effectively.
+  2) Assign x as a root node.
+##Now, How to decide on the best feature/Attribute ?
+In  my given dataset, Parent node is Credit Standing.
+Step1 Find out the fraction of the classes present in the parent node.
+• P(Good) -> fraction of ‘Good’ outcomes in the parent node
+• P(Bad) -> fraction of ‘Bad’ outcomes in the parent node
+P(Good) = 461/780 == 0.59
+P(Bad) = 319/780 == 0.40
+Entropy parent =  0.148 (Calcualted Using the Formula Of Entropy)
+The above process is just an example to show how decision tree picks the best variable to show as a root node.It means I can say the variable which has the lowest entropy and higher information gain goes to the Root Node.Now, as per the Decision Tree I have choosen 5  as the Potential Customers (From scoring dataset) having the ID 2,10,11,12 and 13. The Reason why I have choosen is clear by seeing my deciion tree where, if the credit history is critical then the customer will have the Bad Credit Standing and if the Credit history is Current customers should have Good Credit Standing.
+
+Tune the hyper-parameters
+```{r,echo=FALSE}
+library(rpart.plot)
+library(dplyr)
+library(randomForest)
+library(caret)
+tune_parameters <- function(tune){
+  predict_test <- predict(fit,test_data1,type='class')
+  check <- table(test_data1$`Credit Standing`,predict_test)
+  test_accuracy <- sum(diag(check))/sum(check)
+  test_accuracy
+}
+control <- rpart.control(minsplit = 4,minbucket = round(5/3),maxdepth = 3,cp=0)
+final_tune <- rpart(`Credit Standing`~.,data = train_data,method = 'class',control = control)
+tune_parameters(final_tune)
+```
+Observation : After tunning the parameters the Accuracy of model is not changing.
+
+---------------QUES_4----------------
+
+```{r,echo=FALSE}
+library(randomForest)
+library(caret)
+library(dplyr)
+names(train_data) <- gsub('\\s+', '_', names(train_data))
+train_data %>%
+  rename(
+    Residence_Time =  `Residence_Time_(In_current_district)`
+  )
+names(train_data)
+names(test_data1) <- gsub('\\s+', '_', names(test_data1))
+test_data1 %>%
+  rename(
+    Residence_Time =  `Residence_Time_(In_current_district)`
+  )
+names(test_data1)
+#How to decide how many Random forest tree I can build ? ---- Square root of number of predictors we have(In our #case we have 12 so
+#sqrt of 12 will be close to 3.46)
+set.seed(183)
+is.na(train_data)
+names(train_data)
+library(dplyr)
+train_data$ID <- NULL
+test_data1$ID <- NULL
+train_data=train_data %>% mutate_if(is.character, as.factor)
+str(train_data)
+train_data=train_data %>% 
+  rename(
+    Residence_Time =  `Residence_Time_(In_current_district)`
+  )
+names(train_data)
+test_data1=test_data1 %>% mutate_if(is.character, as.factor)
+str(test_data1)
+test_data1=test_data1 %>%
+  rename(
+    Residence_Time =  `Residence_Time_(In_current_district)`
+  )
+names(test_data1)
+
+rf_tree <- randomForest(train_data$Credit_Standing~., data = train_data, mtry= 8, importance=TRUE, ntree = 500
+                        ,na.action = na.exclude)
+rf_tree
+# Here we got 22.92% of OOB which means nearly 78% of Accuracy.
+attributes(rf_tree)
+rf_tree$confusion
+plot(rf_tree)
+importance(rf_tree)
+varImpPlot(rf_tree,scale = TRUE)
+```
+
+###Improve the accuracy of model using Ensemble technique
+Ensemble :As the word says, a group of items viwed as a whole rather than individually.The main principle behind ensemble modelling is to group weak learners together to form one strong learner.
+
+Random Forest: Random forest is also known as Bagging. where bagging is use to decrease the model's Variance.
+Random forest algorithm is a supervised classification and regression algorithm. As the name suggests, this algorithm randomly creates a forest with several trees.Generally, the more trees in the forest the more robust the forest looks like. Similarly, in the random forest classifier, the higher the number of trees in the forest, greater is the accuracy of the results.
+
+HOW RANDOM FOREST WORKS:
+STEP1 : Create a bootstrapped data set
+Bootstrap is a method of elimination where we make prediction on data using folding method In bootstrap method we select data randomly from the original dataset. The important point to note here that we can select similar data more than once. In the above lines of code brary(caret)
+How to decide how many Random forest tree I can build ? ---- Square root of number of predictors we have(In our case we have 12 sqrt of 12 will be close to 3.46), I have plotted 3 Random forest trees. Hence m=3.
+1) In my model first i have splitted the dataset into 80:20 ratio.Which we will name as Train and test data.first we will test the accuracy of my model on training data followed by test data.
+2)Random Forest will select data randomly from the entire dataset and predict the model on the basis of my misclassification rate(out of bag error) where OOB is the data which is leftover, which will conclude the Error rate if each sample in random forest.
+3)Here we got 24.09% of OOB which means nearly 76% of Accuracy.
+```{r,echo=FALSE}
+library(caret)
+#-----------------Prediction and confusion matrix with Test data-------
+library(dplyr)
+test_data1$ID <- NULL
+plot(rf_tree)
+
+# Tune mtry
+train_data <- as.data.frame(train_data) # I made a use of this line as my Tunrf function was throwing error
+#(Error in randomForest.default(x, y, mtry = mtryStart, ntree = ntreeTry,  : 
+#length of response must be the same as predictor)
+```
+Explnation:
+Observation: As we can see the t value and plot. the OOB rate decreases as the mtry value increases so we will go back to the rf_tree and increase the mtry value from 3 to 6 and see the accuracy ?
+Observation : S0 as the tree grows the number of errors initially increases and then it becomes constant.
+AS per the VarImpPlot higher the mean decrease accuracy higher the importance of the variable in the model. as per my the plot we can see clearly Credit history has the higher mean decrease accuracy which indicates the Most important variable.
+Mean Decrease accuracy : Decides on, how much the model accuracy decreases if we drop that variable.
+The Histogram clearly states that there are 100 trees which contains 120 nodes. However, there are 
+few tress which has less than 80 nodes. Hence Majority of trees have close to 100 Nodes.
+
+-----BOOSTING(Gradient Boosting Method)----------
+```{r,echo=FALSE}
+library(gbm)
+library(caret)
+library(dplyr)
+set.seed(183)
+train_data <- data.frame(train_data)
+boost.credit <- gbm(`Credit_Standing`~.-train_data$Credit_Standing,data = train_data,distribution = "gaussian",n.trees = 5000,shrinkage=0.01,interaction.depth = 4)
+summary(boost.credit)
+test_data1$Credit_Standing <- as.factor(test_data1$Credit_Standing)
+train_data$Credit_Standing <- as.factor(train_data$Credit_Standing)
+prediction_credit <- predict(boost.credit,newdata = test_data1,n.trees = 5000,type = "link")
+prediction_credit
+summary(prediction_credit)
+```
+Explanation of above lines of code:
+What is GBM : Gradient Boost Method, is a ensemble technique/process where weak learners eventually converted as a
+Strong leaners. Wondering how this process actully works ?? SO In a simple Words Boosting a sequential process
+Where the coming/next predictor learn from the mistake of the previous predictor. for that reason we first use the
+Cross Validation process here in order to divide our traning dataset into multiple folds so that first we can select N-rows randomly and with equal in size and train the classifier on the train N-fold and then test on the rest of the folds and then calculate the predictive loss function using the confusion matrix.
+
+Step2: Summary will provide the Variable Importance in the Model.GBM takes three type of parameter.
+1. Interaction_depth : Number of iteration ( we Performed 4)
+2.n.trees: How many trees in each iteration?
+3.Shrinkage: Is the Learning rate(how much the weights are changing/updatation) of model which basically reduces 
+the size of the incremetal steps further.it is 1 means the prediction would be full such as 0.2+1(0.6)=0.8 if it is 0.1 then 0.2+0.1(0.6)=0.26.
+
+Step3: After, Seeing the summary of my gbm model I can see my mean and median lies between 53 to 60. So In the next step I will predict the values for credit standing for the given range of mean and median.
+```{r,echo=TRUE}
+predict_class <- ifelse(prediction_credit<1.56,"Bad","Good")
+table(predict_class,test_data1$Credit_Standing)
+hist(prediction_credit)
+```
+Result: As per the confusion matrix above, we got the accuracy around 74% (True postive rate/total datapoints)
+Why Accuracy getting shrinked? --- On Comparison, Accuracy of GBM model(74%) with Random forest(76%) is decreasing, There could be multiple reasons for that event but I suspect :
+1) May be,Becasue the Boosting works on sequential manner,so the weak learners learn from the previous, moreover it works on high bias and low variance. 
+2)In contrast, Random forest works on parallel basis with low bias and high varaince. RF create Decision tress randomly in that case the features can repeat.for that reason somtimes may be accuracy gets high.
+
+##NOTE:
+I tried the GBM with and alternative approach as well suing the Caret pacakage in R.IN which I will use traincontrol and train parameter to train my model. But Lastly, I went with the method I did in the lab.
+
+------QUES5-------------
+##ANOMALIES DETECTION
+```{r,echo=TRUE}
+library(rpart)
+temp_data <- new_df
+consecutive_data <- rpart(`Credit Standing`~.,data = temp_data,method = 'class')
+temp_data$Prediction <- predict(consecutive_data, data=temp_data,type='class')
+for (i in 1:length(temp_data$ID)){
+  if (temp_data$`Credit Standing`[i] != temp_data$Prediction[i]){
+    print(temp_data$ID[i])
+  }
+}
+data_table <- table(temp_data$`Credit Standing`,temp_data$Prediction)
+data_table
+```
+
+Explanation:As per the Probelm statement, kate has to find where did she go wrong in order to predict the data of credit stading. We can use various methods to detect the issue. The process is called the Anomalies Detection.
+
+Steps to solve : Since, I have to find the wrong pattern in the entire given dataset.for that reason, I will store my whole dataset into the new variable name as temp_data and in the temp data I will introdude a new column name 
+Prediction. Now In the Next step in order to compare the actual data with my predicted data i will iterate each value of both column and check the condition where if the value is not same in both the column i will fetch the ID's of the column and see where the anomalies lies more ?
+
+Step2: By doing so i have got the ID number where the anomalies suspected.
+Result : After seeing and comparing the values i could find the 8 Consecutive Wrong predication and Nearly 2 consecutive IDs which are :
+ID_1 628 GOOD BAD
+ID_2 629 GOOD BAD
+ID_3 728 BAd  GOOD
+ID_4 729 BAD  GOOD
+ID_5 305 BAD  GOOD
+ID_6 308 BAD  GOOD
+ID_7 310 GOOD BAD
+ID_8 311 GOOD BAD
+ID_9 316 BAD GOOD
+ID_10 317 BAD GOOD
